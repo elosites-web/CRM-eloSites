@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   onAuthStateChanged,
+  sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signOut,
   type User,
@@ -52,5 +53,36 @@ export function useAuth() {
     await signOut(auth);
   }, []);
 
-  return { user, loading, login, logout };
+  const resetPassword = useCallback(async (email: string) => {
+    try {
+      await sendPasswordResetEmail(auth, email.trim());
+      return { ok: true as const };
+    } catch (err) {
+      const code = (err as { code?: string })?.code ?? '';
+      // Don't reveal whether the address is actually registered — treat
+      // "not found" the same as success so login emails can't be enumerated.
+      if (code === 'auth/user-not-found') return { ok: true as const };
+      if (code === 'auth/invalid-email') {
+        return { ok: false as const, error: 'E-mail inválido.' };
+      }
+      if (code === 'auth/network-request-failed') {
+        return {
+          ok: false as const,
+          error: 'Sem conexão. Verifique sua internet e tente novamente.',
+        };
+      }
+      if (code === 'auth/too-many-requests') {
+        return {
+          ok: false as const,
+          error: 'Muitas tentativas. Tente novamente em alguns minutos.',
+        };
+      }
+      return {
+        ok: false as const,
+        error: 'Não foi possível enviar o e-mail agora. Tente novamente.',
+      };
+    }
+  }, []);
+
+  return { user, loading, login, logout, resetPassword };
 }

@@ -18,6 +18,20 @@ export interface DocumentLogEntry {
   generatedAt: number;
 }
 
+export interface MaintenanceLogEntry {
+  id: string;
+  date: number;
+  note: string;
+}
+
+export interface SignedDocumentEntry {
+  id: string;
+  name: string;
+  url: string;
+  storagePath: string;
+  uploadedAt: number;
+}
+
 export interface Client {
   id: string;
   name: string;
@@ -50,13 +64,28 @@ export interface Client {
   paymentInstallments: Installment[];
   scopeItems: string[];
   documentLogs: DocumentLogEntry[];
+  // Number of revision rounds included in this client's budget/contract
+  // (defaults to 3 when unset, matching the previous fixed behavior).
+  reviewRounds: number;
+  // One entry per maintenance request the client has used, so usage
+  // against the monthly allowance (5/month, per the standard contract)
+  // can be tracked. Not part of the edit form — logged from the detail view.
+  maintenanceLogs: MaintenanceLogEntry[];
+  // Signed documents (contract, budget, etc.) the client sent back,
+  // stored in Firebase Storage. Not part of the edit form.
+  signedDocuments: SignedDocumentEntry[];
   createdAt?: number;
   updatedAt?: number;
 }
 
 export type ClientInput = Omit<
   Client,
-  'id' | 'createdAt' | 'updatedAt' | 'documentLogs'
+  | 'id'
+  | 'createdAt'
+  | 'updatedAt'
+  | 'documentLogs'
+  | 'maintenanceLogs'
+  | 'signedDocuments'
 >;
 
 export interface SyncState {

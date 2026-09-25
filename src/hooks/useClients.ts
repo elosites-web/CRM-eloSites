@@ -62,6 +62,26 @@ function normalize(data: DocumentData, id: string): Client {
           generatedAt: typeof d?.generatedAt === 'number' ? d.generatedAt : 0,
         }))
       : [],
+    reviewRounds:
+      typeof data.reviewRounds === 'number' && data.reviewRounds > 0
+        ? data.reviewRounds
+        : 3,
+    maintenanceLogs: Array.isArray(data.maintenanceLogs)
+      ? data.maintenanceLogs.map((m: DocumentData) => ({
+          id: String(m?.id ?? ''),
+          date: typeof m?.date === 'number' ? m.date : 0,
+          note: String(m?.note ?? ''),
+        }))
+      : [],
+    signedDocuments: Array.isArray(data.signedDocuments)
+      ? data.signedDocuments.map((s: DocumentData) => ({
+          id: String(s?.id ?? ''),
+          name: String(s?.name ?? ''),
+          url: String(s?.url ?? ''),
+          storagePath: String(s?.storagePath ?? ''),
+          uploadedAt: typeof s?.uploadedAt === 'number' ? s.uploadedAt : 0,
+        }))
+      : [],
     createdAt: typeof data.createdAt === 'number' ? data.createdAt : undefined,
     updatedAt: typeof data.updatedAt === 'number' ? data.updatedAt : undefined,
   };

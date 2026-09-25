@@ -49,6 +49,7 @@ function emptyInput(): ClientInput {
     maintenanceStartDate: '',
     paymentInstallments: [],
     scopeItems: [...catalogFor(PROJECT_TYPES[0])],
+    reviewRounds: 3,
   };
 }
 
@@ -82,6 +83,7 @@ function fromClient(client: Client): ClientInput {
     maintenanceStartDate: client.maintenanceStartDate,
     paymentInstallments: client.paymentInstallments.map((i) => ({ ...i })),
     scopeItems: [...client.scopeItems],
+    reviewRounds: client.reviewRounds || 3,
   };
 }
 
@@ -577,6 +579,26 @@ export function ClientFormModal({
                   ))}
                 </div>
               )}
+
+              <div className="mt-2.5 flex items-center gap-2.5">
+                <label className="text-[12.5px] font-semibold text-text" htmlFor="reviewRounds">
+                  Rodadas de revisão incluídas:
+                </label>
+                <select
+                  id="reviewRounds"
+                  className={`${inputClass} w-20`}
+                  value={form.reviewRounds}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, reviewRounds: Number(e.target.value) }))
+                  }
+                >
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <option key={n} value={n}>
+                      {n}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
               {isCustomType && (
                 <div className="mt-2.5 rounded-[10px] border border-edge bg-card p-3">

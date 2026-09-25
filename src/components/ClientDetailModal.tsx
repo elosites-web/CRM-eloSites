@@ -1,9 +1,19 @@
-import { useState } from 'react';
+import { useMemo, useState, type ChangeEvent } from 'react';
 import { DOCUMENT_TEMPLATES } from '../constants';
 import { generateDocument } from '../lib/documents';
 import { fmtBRL, parseDateParts, stageLabel } from '../lib/format';
-import type { Client, DocumentLogEntry } from '../types';
+import type {
+  Client,
+  DocumentLogEntry,
+  MaintenanceLogEntry,
+  SignedDocumentEntry,
+} from '../types';
 import { Button, StageBadge } from './ui';
+
+const MONTH_NAMES = [
+  'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
+  'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro',
+];
 
 function fmtLogDate(ts: number): string {
   if (!ts) return '—';
@@ -18,14 +28,67 @@ export function ClientDetailModal({
   client,
   onClose,
   onDeleteDocumentLog,
+  onAddMaintenanceLog,
+  onDeleteMaintenanceLog,
+  onUploadSignedDocument,
+  onDeleteSignedDocument,
 }: {
   client: Client;
   onClose: () => void;
   onDeleteDocumentLog: (log: DocumentLogEntry) => Promise<void> | void;
+  onAddMaintenanceLog: (note: string) => Promise<void> | void;
+  onDeleteMaintenanceLog: (log: MaintenanceLogEntry) => Promise<void> | void;
+  onUploadSignedDocument: (file: File) => Promise<void> | void;
+  onDeleteSignedDocument: (doc: SignedDocumentEntry) => Promise<void> | void;
 }) {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [maintenanceNote, setMaintenanceNote] = useState('');
+  const [addingMaintenance, setAddingMaintenance] = useState(false);
+  const [uploadingDoc, setUploadingDoc] = useState(false);
+
+  const now = new Date();
+  const monthLogs = useMemo(
+    () =>
+      client.maintenanceLogs.filter((log) => {
+        const d = new Date(log.date);
+        return (
+          d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth()
+        );
+      }),
+    [client.maintenanceLogs, now],
+  );
+  const monthLabel = `${MONTH_NAMES[now.getMonth()]}/${now.getFullYear()}`;
+
+  async function handleAddMaintenance() {
+    setAddingMaintenance(true);
+    try {
+      await onAddMaintenanceLog(maintenanceNote.trim());
+      setMaintenanceNote('');
+    } catch (err) {
+      console.error(err);
+      setError('Não foi possível registrar a solicitação agora.');
+    } finally {
+      setAddingMaintenance(false);
+    }
+  }
+
+  async function handleFileUpload(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setUploadingDoc(true);
+    setError(null);
+    try {
+      await onUploadSignedDocument(file);
+    } catch (err) {
+      console.error(err);
+      setError('Não foi possível enviar o arquivo agora.');
+    } finally {
+      setUploadingDoc(false);
+    }
+  }
 
   const installments = client.paymentInstallments;
   const paidInstallments = installments.filter((i) => i.paid);
@@ -158,6 +221,69 @@ export function ClientDetailModal({
           </div>
         )}
 
+        {client.maintenance && (
+          <div className="mb-5 rounded-[10px] border border-edge bg-card p-3 text-[12.5px]">
+            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.03em] text-muted">
+                Manutenção — solicitações do mês
+              </div>
+              <div
+                className={`text-[11px] font-semibold ${
+                  monthLogs.length >= 5
+                    ? 'text-danger'
+                    : monthLogs.length >= 4
+                      ? 'text-warn'
+                      : 'text-ok'
+                }`}
+              >
+                {monthLogs.length}/5 usadas em {monthLabel}
+              </div>
+            </div>
+
+            {monthLogs.length > 0 && (
+              <ul className="mb-2.5 flex list-none flex-col gap-1.5 p-0">
+                {[...monthLogs]
+                  .sort((a, b) => b.date - a.date)
+                  .map((log) => (
+                    <li
+                      key={log.id}
+                      className="flex flex-wrap items-center justify-between gap-2 text-muted"
+                    >
+                      <span>
+                        {fmtLogDate(log.date)}
+                        {log.note ? ` · ${log.note}` : ''}
+                      </span>
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        onClick={() => onDeleteMaintenanceLog(log)}
+                      >
+                        Excluir
+                      </Button>
+                    </li>
+                  ))}
+              </ul>
+            )}
+
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <input
+                className="flex-1 rounded-[10px] border border-edge bg-bg2 px-2.5 py-1.5 text-[12.5px] text-text outline-none focus:border-brand-light"
+                placeholder="Nota (opcional) — ex.: troca de texto na Home"
+                value={maintenanceNote}
+                onChange={(e) => setMaintenanceNote(e.target.value)}
+              />
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleAddMaintenance}
+                disabled={addingMaintenance}
+              >
+                {addingMaintenance ? 'Registrando…' : '+ Registrar solicitação'}
+              </Button>
+            </div>
+          </div>
+        )}
+
         <div className="mb-3">
           <h4 className="m-0 text-[15px] font-bold">Gerar documentos</h4>
           <p className="mt-1 text-xs text-muted">
@@ -226,6 +352,62 @@ export function ClientDetailModal({
             </ul>
           </div>
         )}
+
+        <div className="mt-4 border-t border-edge pt-3">
+          <h4 className="m-0 text-[13px] font-bold">Documentos assinados</h4>
+          <p className="mt-1 text-[11px] text-muted">
+            Guarde aqui a cópia assinada que o cliente devolver (contrato, orçamento etc.).
+          </p>
+
+          {client.signedDocuments.length > 0 && (
+            <ul className="mt-2 flex list-none flex-col gap-1.5 p-0 text-xs">
+              {[...client.signedDocuments]
+                .sort((a, b) => b.uploadedAt - a.uploadedAt)
+                .map((doc) => (
+                  <li
+                    key={doc.id}
+                    className="flex flex-wrap items-center justify-between gap-2"
+                  >
+                    <a
+                      href={doc.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-brand-light underline decoration-brand-light/40 underline-offset-2"
+                    >
+                      {doc.name}
+                    </a>
+                    <span className="flex items-center gap-2 text-muted">
+                      enviado em {fmtLogDate(doc.uploadedAt)}
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        onClick={() => onDeleteSignedDocument(doc)}
+                      >
+                        Excluir
+                      </Button>
+                    </span>
+                  </li>
+                ))}
+            </ul>
+          )}
+
+          <label className="mt-2.5 inline-flex cursor-pointer items-center gap-2 text-[12.5px]">
+            <span
+              className={`inline-flex items-center gap-1.5 rounded-[10px] border border-edge px-3.5 py-2 text-[13px] font-semibold text-text transition-colors hover:bg-white/5 ${
+                uploadingDoc ? 'pointer-events-none opacity-50' : ''
+              }`}
+            >
+              {uploadingDoc ? 'Enviando…' : '+ Enviar documento assinado'}
+            </span>
+            <input
+              type="file"
+              className="hidden"
+              onChange={handleFileUpload}
+              disabled={uploadingDoc}
+              accept=".pdf,.doc,.docx,image/*"
+            />
+          </label>
+        </div>
 
         {success && (
           <div className="mt-3 rounded-lg border border-ok/40 bg-ok/10 px-3 py-2 text-xs text-ok">

@@ -1,8 +1,21 @@
 import { useMemo, useState } from 'react';
+import {
+  deleteObject,
+  getDownloadURL,
+  ref,
+  uploadBytes,
+} from 'firebase/storage';
+import { storage } from './firebase';
 import { useAuth } from './hooks/useAuth';
 import { useClients } from './hooks/useClients';
 import { useSyncStatus } from './hooks/useSyncStatus';
-import type { Client, ClientInput, DocumentLogEntry } from './types';
+import type {
+  Client,
+  ClientInput,
+  DocumentLogEntry,
+  MaintenanceLogEntry,
+  SignedDocumentEntry,
+} from './types';
 import { Header } from './components/Header';
 import { Tabs, type TabId } from './components/Tabs';
 import { Dashboard } from './components/Dashboard';
@@ -78,6 +91,65 @@ function CrmApp({
     } catch (err) {
       console.error(err);
       alert('Não foi possível excluir o documento agora.');
+    }
+  }
+
+  async function handleAddMaintenanceLog(client: Client, note: string) {
+    const entry: MaintenanceLogEntry = {
+      id: crypto.randomUUID(),
+      date: Date.now(),
+      note,
+    };
+    await updateClient(client.id, {
+      maintenanceLogs: [...client.maintenanceLogs, entry],
+    });
+  }
+
+  async function handleDeleteMaintenanceLog(client: Client, log: MaintenanceLogEntry) {
+    if (!confirm('Excluir esta solicitação de manutenção do registro?')) return;
+    try {
+      const maintenanceLogs = client.maintenanceLogs.filter((l) => l.id !== log.id);
+      await updateClient(client.id, { maintenanceLogs });
+    } catch (err) {
+      console.error(err);
+      alert('Não foi possível excluir agora.');
+    }
+  }
+
+  async function handleUploadSignedDocument(client: Client, file: File) {
+    const id = crypto.randomUUID();
+    const safeName = file.name.replace(/[^\w.\-]+/g, '_');
+    const storagePath = `clients/${client.id}/signed/${id}-${safeName}`;
+    const storageRef = ref(storage, storagePath);
+    await uploadBytes(storageRef, file);
+    const url = await getDownloadURL(storageRef);
+    const entry: SignedDocumentEntry = {
+      id,
+      name: file.name,
+      url,
+      storagePath,
+      uploadedAt: Date.now(),
+    };
+    await updateClient(client.id, {
+      signedDocuments: [...client.signedDocuments, entry],
+    });
+  }
+
+  async function handleDeleteSignedDocument(client: Client, doc: SignedDocumentEntry) {
+    if (!confirm(`Excluir "${doc.name}"? Essa ação não pode ser desfeita.`)) return;
+    try {
+      const signedDocuments = client.signedDocuments.filter((d) => d.id !== doc.id);
+      await updateClient(client.id, { signedDocuments });
+      if (doc.storagePath) {
+        await deleteObject(ref(storage, doc.storagePath)).catch((err) => {
+          // The Firestore record is already gone; a stray file left in
+          // Storage isn't worth blocking the user over.
+          console.error('Falha ao remover arquivo do Storage:', err);
+        });
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Não foi possível excluir agora.');
     }
   }
 
@@ -158,6 +230,14 @@ function CrmApp({
           client={detailClient}
           onClose={() => setDetailId(null)}
           onDeleteDocumentLog={(log) => handleDeleteDocumentLog(detailClient, log)}
+          onAddMaintenanceLog={(note) => handleAddMaintenanceLog(detailClient, note)}
+          onDeleteMaintenanceLog={(log) => handleDeleteMaintenanceLog(detailClient, log)}
+          onUploadSignedDocument={(file) =>
+            handleUploadSignedDocument(detailClient, file)
+          }
+          onDeleteSignedDocument={(doc) =>
+            handleDeleteSignedDocument(detailClient, doc)
+          }
         />
       )}
     </div>
@@ -165,7 +245,7 @@ function CrmApp({
 }
 
 export default function App() {
-  const { user, loading: authLoading, login, logout } = useAuth();
+  const { user, loading: authLoading, login, logout, resetPassword } = useAuth();
 
   if (authLoading) {
     return (
@@ -176,7 +256,7 @@ export default function App() {
   }
 
   if (!user) {
-    return <Login onLogin={login} />;
+    return <Login onLogin={login} onResetPassword={resetPassword} />;
   }
 
   // Keyed by uid so a fresh login remounts the whole authenticated UI.

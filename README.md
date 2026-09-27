@@ -25,7 +25,13 @@ A chave do Firebase que vai para o navegador **não é segredo**. Quem protege o
 3. Em Authentication > Settings (User actions), **desative o cadastro de novos usuários** ("Enable create (sign-up)"), se essa opção estiver disponível na sua conta. Sem isso, qualquer pessoa com a chave pública pode criar uma conta. A regra por UID protege os dados mesmo assim, mas desativar o cadastro reduz a superfície.
 4. Teste: sem estar logado, uma leitura da coleção `clients` deve ser negada (use o "Rules Playground" do console).
 
+A tela de login tem recuperação de senha por e-mail ("Esqueci minha senha", via `sendPasswordResetEmail` do Firebase Auth). A mensagem de confirmação é sempre a mesma, exista ou não a conta — evita que alguém descubra por tentativa se um e-mail está cadastrado.
+
 Se as regras forem alteradas, repita o teste do item 4.
+
+## Segurança do Storage (documentos assinados)
+
+Os documentos assinados enviados pelo cliente (Cláusula "Documentos assinados" na ficha do cliente) ficam no Firebase Storage, em `clients/{id}/signed/...`. Diferente de `public/templates/`, esses arquivos **não** são estáticos nem públicos — o acesso passa pelas regras em `storage.rules`, que seguem o mesmo padrão de `firestore.rules` (só o UID do proprietário lê ou escreve). Publique o conteúdo desse arquivo também em Firebase Console > Storage > Rules ao alterá-lo.
 
 ## Documentos (.docx)
 
@@ -40,14 +46,16 @@ Valores padrão definidos no código (alteráveis em `buildContext`):
 |---|---|---|
 | `noticeDays` | 30 | Aviso prévio de cancelamento da manutenção |
 | `cureDays` | 30 | Prazo para sanar descumprimento antes da rescisão |
-| `reviewRounds` | 3 | Rodadas de revisão no orçamento |
 | `maintenanceDueDay` | dia de `maintenanceStartDate` | Vencimento mensal da manutenção |
+
+`reviewRounds` (rodadas de revisão) deixou de ser um valor fixo no código: agora é um campo por cliente (`Client.reviewRounds`, padrão 3), editável no formulário de cadastro junto ao catálogo de escopo.
 
 Observações:
 
 - O **número do orçamento** (`ORC-AAAAMMDD-XXXX`) é gerado na primeira geração de documento do cliente e gravado no cadastro; não muda depois.
 - Os documentos mostram apenas o **cronograma de parcelas** (valor e data). O status pago/pendente fica somente no CRM.
 - Se a manutenção começar nos dias 29, 30 ou 31, o vencimento "todo dia N" não existe em todos os meses. Prefira um início entre os dias 1 e 28.
+- **Solicitações de manutenção do mês** (`Client.maintenanceLogs`) são registradas manualmente na ficha do cliente (não são geradas automaticamente) e servem só para você acompanhar o uso da franquia de 5/mês — não entram em nenhum documento gerado.
 
 ## Aviso sobre arquivos públicos
 

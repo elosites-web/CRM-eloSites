@@ -1,0 +1,27 @@
+rules_version = '2';
+
+// Regras do Firebase Storage do CRM ēloSites.
+// Somente o UID do proprietário pode ler ou escrever. Todo o resto é negado.
+// Espelha o mesmo padrão de firestore.rules — mesmo UID, mesma lógica.
+//
+// UID do proprietário (Firebase Console > Authentication > Users). O UID não é segredo.
+// Este arquivo espelha as regras publicadas no console; se mudar aqui, publique lá também.
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isOwner() {
+      return request.auth != null
+        && request.auth.uid == 'BI9afYasZoQgC2G6dxqo6sU6w7P2';
+    }
+
+    // Documentos assinados enviados pelo cliente, guardados por cliente.
+    match /clients/{clientId}/signed/{fileName} {
+      allow read, write: if isOwner();
+    }
+
+    // Qualquer outro caminho: acesso negado.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -29,6 +29,9 @@ function daysBetween(from: string, to: string): string {
   return days >= 0 ? String(days) : '';
 }
 
+// Documents state the agreed payment schedule only (amount and due date).
+// The paid/pending status is deliberately left out: it changes over time, so
+// printing it would make a signed document inaccurate. It stays in the CRM.
 function formatInstallments(list: Installment[]): string {
   const valid = list.filter((i) => i.date || (i.value !== null && i.value !== undefined));
   if (valid.length === 0) return '—';
@@ -37,10 +40,16 @@ function formatInstallments(list: Installment[]): string {
       const parts: string[] = [];
       if (inst.value !== null && inst.value !== undefined) parts.push(`R$ ${money(inst.value)}`);
       if (inst.date) parts.push(`em ${parseDateParts(inst.date).br}`);
-      parts.push(inst.paid ? 'pago' : 'pendente');
       return `${idx + 1}ª parcela: ${parts.join(' ')}`;
     })
     .join('; ');
+}
+
+// Budget number: generated once per client and then persisted, so the quote
+// and the contract that references it always show the same number.
+function makeBudgetNumber(client: Client): string {
+  const t = todayParts();
+  return `ORC-${t.iso.replace(/-/g, '')}-${client.id.slice(0, 4).toUpperCase()}`;
 }
 
 // Older records may still carry the previous catalog label that referenced a
@@ -72,7 +81,7 @@ function extraScopeItems(client: Client): string[] {
   return client.scopeItems.filter((item) => !known.has(item));
 }
 
-export function buildContext(client: Client) {
+export function buildContext(client: Client, budgetNumber: string) {
   const today = todayParts();
   const isLanding = client.projectType === 'Landing page';
   const isSite = client.projectType === 'Site institucional';
@@ -81,6 +90,8 @@ export function buildContext(client: Client) {
     client.projectType === LEGACY_PROJECT_TYPE;
   const budget = client.budget;
   const maintenanceStandard = budget ? budget * 0.2 : null;
+  // Maintenance is billed on the same day of the month it starts.
+  const maintenanceStart = parseDateParts(client.maintenanceStartDate);
 
   return {
     clientName: client.name,
@@ -112,7 +123,7 @@ export function buildContext(client: Client) {
     todayDay: today.day,
     todayMonth: today.month,
     todayYear: today.year,
-    budgetNumber: `ORC-${today.year}${String(new Date().getMonth() + 1).padStart(2, '0')}${today.day}`,
+    budgetNumber,
 
     landingMark: flag(isLanding),
     siteMark: flag(isSite),
@@ -138,9 +149,9 @@ export function buildContext(client: Client) {
       (i) => Boolean(i.date) || (i.value !== null && i.value !== undefined),
     ),
     reviewRounds: String(client.reviewRounds || 3),
-    noticeDays: '15',
-    cureDays: '15',
-    maintenanceDueDay: '',
+    noticeDays: '30',
+    cureDays: '30',
+    maintenanceDueDay: maintenanceStart.iso ? String(Number(maintenanceStart.day)) : '',
 
     scopeItems: client.scopeItems,
     // Projeto Personalizado draws its checklist from both standard catalogs
@@ -152,7 +163,7 @@ export function buildContext(client: Client) {
       const extras = extraScopeItems(client);
       return extras.length > 0
         ? extras.map((item) => ({ item, description: '' }))
-        : [{ item: '', description: '' }];
+        : [{ item: 'Nenhum item adicional.', description: '—' }];
     })(),
   };
 }
@@ -193,7 +204,8 @@ export async function generateDocument(templateId: string, client: Client): Prom
     nullGetter: () => '',
   });
 
-  docx.render(buildContext(client));
+  const budgetNumber = client.budgetNumber || makeBudgetNumber(client);
+  docx.render(buildContext(client, budgetNumber));
 
   const out = docx.getZip().generate({
     type: 'blob',
@@ -215,5 +227,6 @@ export async function generateDocument(templateId: string, client: Client): Prom
       templateLabel: template.label,
       generatedAt: Date.now(),
     } satisfies DocumentLogEntry),
+    ...(client.budgetNumber ? {} : { budgetNumber }),
   }).catch((err: unknown) => console.error(err));
 }

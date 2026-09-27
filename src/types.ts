@@ -64,6 +64,8 @@ export interface Client {
   paymentInstallments: Installment[];
   scopeItems: string[];
   documentLogs: DocumentLogEntry[];
+  // Set automatically the first time a document is generated; never edited by hand.
+  budgetNumber?: string;
   // Number of revision rounds included in this client's budget/contract
   // (defaults to 3 when unset, matching the previous fixed behavior).
   reviewRounds: number;

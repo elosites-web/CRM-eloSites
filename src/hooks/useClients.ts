@@ -55,6 +55,10 @@ function normalize(data: DocumentData, id: string): Client {
         }))
       : [],
     scopeItems: Array.isArray(data.scopeItems) ? data.scopeItems.map(String) : [],
+    budgetNumber:
+      typeof data.budgetNumber === 'string' && data.budgetNumber
+        ? data.budgetNumber
+        : undefined,
     documentLogs: Array.isArray(data.documentLogs)
       ? data.documentLogs.map((d: DocumentData) => ({
           templateId: String(d?.templateId ?? ''),

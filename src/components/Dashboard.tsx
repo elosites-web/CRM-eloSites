@@ -1,4 +1,5 @@
 import { fmtBRL } from '../lib/format';
+import { receivedTotal, remainingBalance } from '../lib/finance';
 import { exportBackupJSON, exportSpreadsheet } from '../lib/export';
 import type { Client } from '../types';
 import { Alerts, type ClientAlert } from './Alerts';
@@ -17,15 +18,8 @@ export function Dashboard({
   const ativos = clients.filter(
     (c) => c.pipelineStage !== 'entregue' || c.maintenance,
   ).length;
-  const aReceber = clients.reduce((sum, c) => {
-    const budget = Number(c.budget) || 0;
-    const deposit = Number(c.deposit) || 0;
-    return sum + Math.max(budget - deposit, 0);
-  }, 0);
-  const receitaFechada = clients.reduce(
-    (sum, c) => sum + (Number(c.deposit) || 0),
-    0,
-  );
+  const aReceber = clients.reduce((sum, c) => sum + remainingBalance(c), 0);
+  const receitaFechada = clients.reduce((sum, c) => sum + receivedTotal(c), 0);
   const manutencoesAtivas = clients.filter((c) => c.maintenance).length;
   const receitaManutencao = clients.reduce(
     (sum, c) => (c.maintenance ? sum + (Number(c.maintenanceValue) || 0) : sum),

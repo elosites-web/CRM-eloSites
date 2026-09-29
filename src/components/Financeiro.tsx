@@ -1,4 +1,5 @@
 import { fmtBRL, parseDateParts } from '../lib/format';
+import { receivedTotal } from '../lib/finance';
 import type { Client, Installment } from '../types';
 import { EmptyState, Kpi, SectionTitle } from './ui';
 
@@ -26,20 +27,6 @@ function hasInstallments(client: Client): boolean {
   return (
     Array.isArray(client.paymentInstallments) && client.paymentInstallments.length > 0
   );
-}
-
-// When installments are registered they are the source of truth for what has
-// actually been received (only paid ones count). Clients without installments
-// keep the legacy `deposit` value. Paid installments replace `deposit` — never
-// sum both, which would double-count the same payment.
-function receivedTotal(client: Client): number {
-  if (hasInstallments(client)) {
-    return client.paymentInstallments.reduce(
-      (sum, inst) => (inst.paid ? sum + (Number(inst.value) || 0) : sum),
-      0,
-    );
-  }
-  return Number(client.deposit) || 0;
 }
 
 export function Financeiro({ clients }: { clients: Client[] }) {

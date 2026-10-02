@@ -147,4 +147,13 @@ export const DOCUMENT_TEMPLATES: DocumentTemplate[] = [
     kind: 'client',
     description: 'Acordo do plano de manutenção mensal, quando contratado.',
   },
+  {
+    id: 'checklist',
+    label: 'Checklist de Entrega',
+    file: 'checklist-entrega.docx',
+    prefix: 'Checklist_de_Entrega',
+    kind: 'internal',
+    description:
+      'Ritual de entrega por cliente: site, documentação, financeiro, transferência e encerramento — com os entregáveis contratados deste cliente já preenchidos.',
+  },
 ];

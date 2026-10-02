@@ -84,7 +84,12 @@ export function ClientDetailModal({
       await onUploadSignedDocument(file);
     } catch (err) {
       console.error(err);
-      setError('Não foi possível enviar o arquivo agora.');
+      const code = (err as { code?: string })?.code;
+      setError(
+        code
+          ? `Não foi possível enviar o arquivo (${code}). Se for a primeira vez, confira se o Storage está ativado e as regras publicadas no Firebase Console.`
+          : 'Não foi possível enviar o arquivo agora.',
+      );
     } finally {
       setUploadingDoc(false);
     }

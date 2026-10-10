@@ -157,3 +157,66 @@ export const DOCUMENT_TEMPLATES: DocumentTemplate[] = [
       'Ritual de entrega por cliente: site, documentação, financeiro, transferência e encerramento — com os entregáveis contratados deste cliente já preenchidos.',
   },
 ];
+
+// Optional question blocks appended to the Briefing, chosen per client when
+// the document is generated. The base briefing stays the same for everyone;
+// each block adds the questions that only make sense for that kind of
+// business. Questions only ask for information: nothing here states or
+// promises anything on the client's behalf.
+export interface BriefingBlock {
+  id: string;
+  label: string;
+  title: string;
+  questions: string[];
+}
+
+export const BRIEFING_BLOCKS: BriefingBlock[] = [
+  {
+    id: 'regulada',
+    label: 'Profissão regulamentada',
+    title: 'Profissão regulamentada',
+    questions: [
+      'Qual é o conselho ou órgão que regula a sua atividade (ex.: CRM, OAB, CREF, CRP, CRC) e qual é o número do seu registro?',
+      'O conselho tem regras de publicidade? Você tem acesso a elas? (Envie o link ou o documento.)',
+      'Quais títulos, especializações ou formações podem ser divulgados? Você consegue enviar a comprovação?',
+      'Pelas regras do seu conselho, é permitido divulgar resultados, depoimentos ou fotos de "antes e depois"? (Sem confirmação, esse tipo de conteúdo não será publicado.)',
+    ],
+  },
+  {
+    id: 'marca',
+    label: 'Parceria / revenda de marca',
+    title: 'Parceria, revenda ou representação de marca',
+    questions: [
+      'Qual é a sua relação com a marca: parceiro autorizado, revendedor, representante, prestador de serviços ou outra? Como você pode se apresentar publicamente?',
+      'Você tem contrato ou documento que comprove essa relação? Pode nos enviar?',
+      'Você pode usar o nome e o logo da marca no site? A marca tem manual ou regras de uso? (Envie o material, se houver.)',
+      'A marca exige aprovação prévia dos materiais de divulgação? Quem aprova?',
+      'Quais produtos, planos ou ofertas da marca podem ser divulgados no site? Podem aparecer preços e condições? Quem mantém essas informações atualizadas?',
+      'Existe algo que a marca proíbe dizer ou prometer na divulgação (ex.: velocidades, descontos, prazos)?',
+    ],
+  },
+  {
+    id: 'local',
+    label: 'Atendimento local / por região',
+    title: 'Atendimento local ou por região',
+    questions: [
+      'Como é feito o atendimento: no endereço da empresa, com hora marcada, na casa ou empresa do cliente, à distância ou só por WhatsApp?',
+      'O endereço pode aparecer no site como local para receber visitas? Há estacionamento ou acessibilidade que valha informar?',
+      'Quais cidades, bairros ou regiões vocês atendem?',
+      'Quais são os dias e horários de atendimento?',
+      'A empresa tem perfil no Google (Google Meu Negócio)? Envie o link.',
+    ],
+  },
+  {
+    id: 'comercio',
+    label: 'Comércio / venda de produtos',
+    title: 'Comércio e venda de produtos',
+    questions: [
+      'Quais são as principais categorias ou marcas de produtos que vocês vendem?',
+      'A venda é feita pelo site, por WhatsApp ou só na loja? O site terá catálogo com preços ou apenas "consulte"?',
+      'Quais formas de pagamento são aceitas?',
+      'Vocês fazem entrega? Em quais regiões, em quanto tempo e com qual taxa?',
+      'Qual é a política de trocas, devoluções e garantia?',
+    ],
+  },
+];

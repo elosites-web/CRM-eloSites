@@ -22,6 +22,7 @@ const labelClass = 'mb-1 block text-[11px] font-semibold text-muted';
 function emptyInput(): ClientInput {
   return {
     name: '',
+    legalName: '',
     cnpjCpf: '',
     cnpjCpfType: 'CPF',
     segment: '',
@@ -56,6 +57,7 @@ function emptyInput(): ClientInput {
 function fromClient(client: Client): ClientInput {
   return {
     name: client.name,
+    legalName: client.legalName,
     cnpjCpf: client.cnpjCpf,
     cnpjCpfType: client.cnpjCpfType,
     segment: client.segment,
@@ -220,7 +222,14 @@ export function ClientFormModal({
         </h3>
         <form onSubmit={handleSubmit}>
           <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-            <Field label="Nome / empresa *" full>
+            <Field
+              label={
+                form.cnpjCpfType === 'CNPJ'
+                  ? 'Nome comercial (nome fantasia) *'
+                  : 'Nome (pessoa ou nome comercial) *'
+              }
+              full
+            >
               <input
                 className={inputClass}
                 required
@@ -228,6 +237,16 @@ export function ClientFormModal({
                 onChange={(e) => set('name', e.target.value)}
               />
             </Field>
+
+            {form.cnpjCpfType === 'CNPJ' && (
+              <Field label="Razão social" full>
+                <input
+                  className={inputClass}
+                  value={form.legalName}
+                  onChange={(e) => set('legalName', e.target.value)}
+                />
+              </Field>
+            )}
 
             <Field label={form.cnpjCpfType === 'CNPJ' ? 'CNPJ' : 'CPF'}>
               <input

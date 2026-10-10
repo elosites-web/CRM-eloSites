@@ -35,6 +35,8 @@ export interface SignedDocumentEntry {
 export interface Client {
   id: string;
   name: string;
+  // Razão social (only meaningful for CNPJ clients). `name` stays the trade name.
+  legalName: string;
   cnpjCpf: string;
   cnpjCpfType: CnpjCpfType;
   segment: string;

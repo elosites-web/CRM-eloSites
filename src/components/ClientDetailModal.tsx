@@ -1,5 +1,5 @@
 import { useMemo, useState, type ChangeEvent } from 'react';
-import { DOCUMENT_TEMPLATES } from '../constants';
+import { BRIEFING_BLOCKS, DOCUMENT_TEMPLATES } from '../constants';
 import { generateDocument } from '../lib/documents';
 import { fmtBRL, parseDateParts, stageLabel } from '../lib/format';
 import type {
@@ -47,6 +47,7 @@ export function ClientDetailModal({
   const [maintenanceNote, setMaintenanceNote] = useState('');
   const [addingMaintenance, setAddingMaintenance] = useState(false);
   const [uploadingDoc, setUploadingDoc] = useState(false);
+  const [briefingBlockIds, setBriefingBlockIds] = useState<string[]>([]);
 
   const now = new Date();
   const monthLogs = useMemo(
@@ -106,12 +107,20 @@ export function ClientDetailModal({
     0,
   );
 
+  function toggleBriefingBlock(blockId: string) {
+    setBriefingBlockIds((current) =>
+      current.includes(blockId)
+        ? current.filter((item) => item !== blockId)
+        : [...current, blockId],
+    );
+  }
+
   async function handleGenerate(id: string) {
     setError(null);
     setSuccess(null);
     setBusyId(id);
     try {
-      await generateDocument(id, client);
+      await generateDocument(id, client, { briefingBlockIds });
       const template = DOCUMENT_TEMPLATES.find((t) => t.id === id);
       setSuccess(`"${template?.label ?? 'Documento'}" gerado com sucesso.`);
     } catch (err) {
@@ -133,6 +142,9 @@ export function ClientDetailModal({
         <div className="mb-4 flex items-start justify-between gap-3">
           <div>
             <h3 className="m-0 text-base font-bold">{client.name}</h3>
+            {client.legalName && (
+              <div className="mt-0.5 text-xs text-muted">{client.legalName}</div>
+            )}
             <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted">
               <StageBadge stage={client.pipelineStage} />
               {client.projectType && <span>{client.projectType}</span>}
@@ -313,6 +325,29 @@ export function ClientDetailModal({
               <p className="mb-2 text-[11px] leading-snug text-muted">
                 {t.description}
               </p>
+              {t.id === 'briefing' && (
+                <fieldset className="mb-2 min-w-0 border-0 p-0">
+                  <legend className="mb-1 p-0 text-[11px] font-semibold text-muted">
+                    Perguntas extras do segmento (opcional)
+                  </legend>
+                  <div className="flex flex-col gap-1">
+                    {BRIEFING_BLOCKS.map((block) => (
+                      <label
+                        key={block.id}
+                        className="flex cursor-pointer items-start gap-1.5 text-[11.5px] text-text"
+                      >
+                        <input
+                          type="checkbox"
+                          className="mt-[2px]"
+                          checked={briefingBlockIds.includes(block.id)}
+                          onChange={() => toggleBriefingBlock(block.id)}
+                        />
+                        <span>{block.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </fieldset>
+              )}
               <Button
                 variant="ghost"
                 size="sm"

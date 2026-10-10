@@ -17,6 +17,7 @@ function normalize(data: DocumentData, id: string): Client {
   return {
     id,
     name: String(data.name ?? ''),
+    legalName: String(data.legalName ?? ''),
     cnpjCpf: String(data.cnpjCpf ?? ''),
     cnpjCpfType: data.cnpjCpfType === 'CNPJ' ? 'CNPJ' : 'CPF',
     segment: String(data.segment ?? ''),

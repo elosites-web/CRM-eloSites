@@ -50,6 +50,19 @@ Valores padrão definidos no código (alteráveis em `buildContext`):
 
 `reviewRounds` (rodadas de revisão) deixou de ser um valor fixo no código: agora é um campo por cliente (`Client.reviewRounds`, padrão 3), editável no formulário de cadastro junto ao catálogo de escopo.
 
+### Cadastro: nome comercial, razão social e CNPJ/CPF
+
+- `name` = **nome comercial** (nome fantasia) para empresas, ou o nome da pessoa/negócio quando o cliente é CPF. É o que aparece na lista e em `{clientName}`.
+- `legalName` = **razão social** (campo exibido só quando o tipo é CNPJ). Disponível nos modelos como `{legalName}`; hoje só o briefing usa.
+- `cnpjCpf` + `cnpjCpfType` = número e tipo do documento (`{cnpjCpf}`).
+- Contrato, termos e orçamento continuam usando `{clientName}`. Se quiser que a parte contratante de clientes CNPJ seja identificada pela razão social, é uma decisão a tomar (e a validar com advogado) antes de trocar a tag nesses modelos.
+
+### Briefing: base fixa + perguntas por segmento
+
+- O briefing só preenche dados que você já tem: nome comercial, razão social, CNPJ/CPF, endereço, WhatsApp e e-mail. **Domínio não é preenchido** (o cliente responde).
+- Ao gerar o briefing, é possível marcar blocos de perguntas extras (profissão regulamentada, parceria/revenda de marca, atendimento local, comércio). Os blocos ficam em `BRIEFING_BLOCKS` (`src/constants.ts`); para criar um novo, basta acrescentar um item lá. Nenhuma alteração no `.docx` é necessária.
+- Variáveis do briefing: `{legalName}`, `{nicheSections}` (laço com `{title}` e `{questions}` → `{text}`), `{sendSectionNumber}` e `{finalSectionNumber}` (mantêm a numeração contínua conforme os blocos escolhidos). Montadas em `src/lib/briefing.ts`.
+
 Observações:
 
 - O **número do orçamento** (`ORC-AAAAMMDD-XXXX`) é gerado na primeira geração de documento do cliente e gravado no cadastro; não muda depois.

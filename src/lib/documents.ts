@@ -10,6 +10,7 @@ import {
   SITE_CATALOG,
 } from '../constants';
 import type { Client, DocumentLogEntry, Installment } from '../types';
+import { buildBriefingContext } from './briefing';
 import { valorPorExtenso } from './extenso';
 import { flag, parseDateParts, todayParts } from './format';
 
@@ -81,7 +82,11 @@ function extraScopeItems(client: Client): string[] {
   return client.scopeItems.filter((item) => !known.has(item));
 }
 
-export function buildContext(client: Client, budgetNumber: string) {
+export function buildContext(
+  client: Client,
+  budgetNumber: string,
+  briefingBlockIds: string[] = [],
+) {
   const today = todayParts();
   const isLanding = client.projectType === 'Landing page';
   const isSite = client.projectType === 'Site institucional';
@@ -95,6 +100,7 @@ export function buildContext(client: Client, budgetNumber: string) {
 
   return {
     clientName: client.name,
+    legalName: client.legalName,
     cnpjCpf: client.cnpjCpf,
     cnpjCpfType: client.cnpjCpfType,
     address: client.address,
@@ -153,6 +159,8 @@ export function buildContext(client: Client, budgetNumber: string) {
     cureDays: '30',
     maintenanceDueDay: maintenanceStart.iso ? String(Number(maintenanceStart.day)) : '',
 
+    ...buildBriefingContext(briefingBlockIds),
+
     scopeItems: client.scopeItems,
     // Projeto Personalizado draws its checklist from both standard catalogs
     // (see CUSTOM_CATALOG), so marks must reflect the selection there too —
@@ -188,7 +196,16 @@ function download(blob: Blob, filename: string) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-export async function generateDocument(templateId: string, client: Client): Promise<void> {
+export interface GenerateOptions {
+  // Optional question blocks (BRIEFING_BLOCKS ids); only used by the briefing.
+  briefingBlockIds?: string[];
+}
+
+export async function generateDocument(
+  templateId: string,
+  client: Client,
+  options: GenerateOptions = {},
+): Promise<void> {
   const template = DOCUMENT_TEMPLATES.find((t) => t.id === templateId);
   if (!template) throw new Error('Modelo de documento não encontrado.');
 
@@ -205,7 +222,13 @@ export async function generateDocument(templateId: string, client: Client): Prom
   });
 
   const budgetNumber = client.budgetNumber || makeBudgetNumber(client);
-  docx.render(buildContext(client, budgetNumber));
+  docx.render(
+    buildContext(
+      client,
+      budgetNumber,
+      templateId === 'briefing' ? options.briefingBlockIds : [],
+    ),
+  );
 
   const out = docx.getZip().generate({
     type: 'blob',
